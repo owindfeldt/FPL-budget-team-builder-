@@ -20,7 +20,7 @@ Before you begin, please ensure you have the following installed:
 
 Follow these steps to set up the project on your local machine.
 
-Step 1: Clone the Repository
+- Step 1: Clone the Repository
 Open your Terminal (or Anaconda Prompt) and run the following command to download the project:
 
 git clone [https://github.com/ditt-anvandarnamn/ditt-repo-namn.git](https://github.com/ditt-anvandarnamn/ditt-repo-namn.git)
@@ -29,7 +29,7 @@ git clone [https://github.com/ditt-anvandarnamn/ditt-repo-namn.git](https://gith
 (Note: Replace the URL with your actual GitHub repository URL.)
 
 
-Step 2: Navigate to the Project Directory
+- Step 2: Navigate to the Project Directory
 Change into the newly created folder:
 
 cd fpl-budget-team-builder
@@ -38,7 +38,7 @@ cd fpl-budget-team-builder
 (Note: This assumes your repo is named fpl-budget-team-builder.)
 
 
-Step 3: Install Required Packages
+- Step 3: Install Required Packages
 Install all necessary Python libraries using the requirements.txt file:
 
 pip install -r requirements.txt
