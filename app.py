@@ -8,16 +8,17 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.messages import HumanMessage, AIMessage
 
-#  STEP 1 & 2: DATAPREPROCESSING (WITH Caching)
+#  DATA PREPARATION 
+# This function is identical, it just loads our data
 @st.cache_data
 def load_and_prepare_data():
-    st.info("Laddar och förbereder FPL-rådata (säsong 23/24)... (detta görs bara en gång)")
+    st.info("Loading and preparing 23/24 FPL data")
     
     try:
         url = "https://raw.githubusercontent.com/vaastav/Fantasy-Premier-League/master/data/2023-24/gws/merged_gw.csv"
         df_raw = pd.read_csv(url)
     except Exception as e:
-        st.error(f"Kunde inte ladda data från GitHub: {e}")
+        st.error(f"Could not load data from GitHub: {e}")
         return None
 
     # Cleaning
@@ -41,7 +42,7 @@ def load_and_prepare_data():
         'price': 'current_price'
     }, inplace=True)
     
-    # Step 2: Format the data as as text
+    # Step 2: Format the data as text
     df_filtered = df_agg[df_agg['total_minutes_season'] > 500].copy()
     df_sorted = df_filtered.sort_values(by='total_points_season', ascending=False)
     
@@ -55,30 +56,31 @@ def load_and_prepare_data():
         )
         output_text += player_string
     
-    st.success("Datainläsning klar!")
+    st.success("Data loading complete!")
     return output_text
 
-# STEG 3: AI-LOGIK 
+# AI LOGIC  
 
 def get_ai_chain(api_key, player_data_text):
     
-    # 1. Systemprompten sätter reglerna och ger datan
+    # 1. The System Prompt sets the rules and provides the data
+    # THIS IS THE BLOCK YOU ASKED TO CHANGE:
     system_prompt = f"""
-    Du är en expert på Fantasy Premier League (FPL).
-    Ditt mål är att hjälpa användaren bygga ett lag.
-    Du måste basera alla dina val och beräkningar på följande spelardata (från säsongen 2023-24).
+    You are an expert on Fantasy Premier League (FPL).
+    Your goal is to help the user build a team.
+    You must base all your choices and calculations on the following player data (from the 2023-24 season).
 
-    PLAYERRDATA:
+    PLAYER DATA:
     ---
     {player_data_text}
     ---
 
-    Regler för konversation:
-    - Svara alltid på samma språk som användarens senaste meddelande.
-    - Var artig och hjälpsam.
-    - Du måste komma ihåg tidigare meddelanden i konversationen.
-    - Användaren kommer att ge dig sina "Aktuella Inställningar" (Budget och Formation)
-      i varje meddelande. Du måste följa dessa inställningar.
+    Conversation Rules:
+    - Always respond in the SAME language as the user's last message.
+    - Be polite and helpful.
+    - You must remember previous messages in the conversation.
+    - The user will provide you with their "Current Settings" (Budget and Formation)
+      in each message. You must follow these settings.
     """
     
     # 2. Load the model
@@ -88,71 +90,71 @@ def get_ai_chain(api_key, player_data_text):
         temperature=0.7
     )
     
-    # 3. Skapa den nya prompt-mallen create the new prompt template
-    # It now gathers 4 variables: budget, formation, chat_history, input
+    # 3. Create the new prompt template
+    # It now takes 4 variables: budget, formation, chat_history, input
     prompt = ChatPromptTemplate.from_messages([
         ("system", system_prompt),
         ("placeholder", "{chat_history}"), 
         ("user", """
-        Mina aktuella inställningar:
-        - Budget: {budget} miljoner
+        My Current Settings:
+        - Budget: {budget} million
         - Formation: {formation}
         
-        Min fråga: {input}
+        My Question: {input}
         """)
     ])
     
-    # 4. Create an easy chain
+    # 4. Create a simple chain
     chain = prompt | llm | StrOutputParser()
     
     return chain
 
-# --- STEG 4: STREAMLIT INTERFACE	
+#  STREAMLIT INTERFACE 
 
 st.set_page_config(layout="wide")
 st.title("FPL Budget Team Builder")
-st.markdown("Använd sidomenyn för att ställa in din budget och formation. Ställ sedan frågor i chatten!")
+st.markdown("Use the sidebar to set your budget and formation. Then, ask questions in the chat!")
 
-# LOAD THE DATA	
+# Load our data
 player_data = load_and_prepare_data()
 
-# Sidebar) 
-st.sidebar.header("Konfiguration")
+# --- SIDEBAR ---
+st.sidebar.header("Configuration")
 user_api_key = st.sidebar.text_input(
-    "Ange din OpenAI API-nyckel (sk-...)",
+    "Enter your OpenAI API Key (sk-...)",
     type="password",
-    help="Din nyckel sparas inte, den används bara för denna session."
+    help="Your key is not stored, it is only used for this session."
 )
 
 st.sidebar.divider()
-st.sidebar.header("Dina Laginställningar")
+st.sidebar.header("Your Team Settings")
 
-# 1. Budget-slider 
+# 1. Budget Slider (BACK!)
 user_budget = st.sidebar.slider(
-    "Välj din budget (i miljoner):",
+    "Select your budget (in millions):",
     min_value=80.0,
     max_value=120.0,
-    value=100.0, # Standardvärde
+    value=100.0, # Default value
     step=0.5
 )
 
-# 2. Choose formation of the team
+# 2. Formation Selector (BACK!)
 col1, col2 = st.sidebar.columns(2)
-gk_count = col1.number_input("Målvakter (GK):", min_value=1, max_value=1, value=1)
-def_count = col2.number_input("Försvarare (DEF):", min_value=3, max_value=5, value=4)
-mid_count = col1.number_input("Mittfältare (MID):", min_value=2, max_value=5, value=4)
-fwd_count = col2.number_input("Anfallare (FWD):", min_value=1, max_value=3, value=2)
+gk_count = col1.number_input("Goalkeepers (GK):", min_value=1, max_value=1, value=1)
+def_count = col2.number_input("Defenders (DEF):", min_value=3, max_value=5, value=4)
+mid_count = col1.number_input("Midfielders (MID):", min_value=2, max_value=5, value=4)
+fwd_count = col2.number_input("Forwards (FWD):", min_value=1, max_value=3, value=2)
 
 user_formation = f"{gk_count} GK, {def_count} DEF, {mid_count} MID, {fwd_count} FWD"
 total_players = gk_count + def_count + mid_count + fwd_count
 
 if total_players != 11:
-    st.sidebar.error(f"Ditt lag måste ha 11 spelare, du har {total_players}.")
+    st.sidebar.error(f"Your team must have 11 players. You have {total_players}.")
 else:
-    st.sidebar.success(f"Du har valt {total_players} spelare.")
+    st.sidebar.success(f"You have selected {total_players} players.")
 
 
-# CHATT-LOGIK 
+#  CHAT LOGIC 
 if player_data:
     if "messages" not in st.session_state:
         st.session_state.messages = []
@@ -160,31 +162,31 @@ if player_data:
     if "ai_chain" not in st.session_state:
         st.session_state.ai_chain = None
 
-    # Visa alla gamla meddelanden
+    # Display all old messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # Waiting for new input from user
-    if prompt := st.chat_input("Din fråga... (t.ex. 'Ge mig 3 lagförslag')"):
+    # Wait for new user input
+    if prompt := st.chat_input("Your question... (e.g., 'Give me 3 team suggestions')"):
         
-        #  Control if API-key exists
+        # Check if API key is present
         if not user_api_key:
-            st.error("Du måste ange din OpenAI API-nyckel i sidomenyn först.")
-        #  Control if formation is 11 players
+            st.error("Please enter your OpenAI API key in the sidebar to begin.")
+        # Check if formation is 11 players
         elif total_players != 11:
-             st.error("Justera din formation i sidomenyn. Du måste ha exakt 11 spelare.")
+             st.error("Please adjust your formation in the sidebar. You must have exactly 11 players.")
         else:
-            # Initiate the chain if not already exists 
+            # Initialize the chain if it doesn't exist
             if st.session_state.ai_chain is None:
                 st.session_state.ai_chain = get_ai_chain(user_api_key, player_data)
             
-            # a. Add users message in history
+            # a. Add user message to history
             st.session_state.messages.append({"role": "user", "content": prompt})
             with st.chat_message("user"):
                 st.markdown(prompt)
             
-            # b.  Formate the history for the AI
+            # b. Format the history for the AI
             formatted_history = []
             for msg in st.session_state.messages[:-1]:
                 if msg["role"] == "user":
@@ -192,20 +194,21 @@ if player_data:
                 elif msg["role"] == "assistant":
                     formatted_history.append(AIMessage(content=msg["content"]))
             
-            # c.  Generate AI answear
+            # c. Generate AI response
             with st.chat_message("assistant"):
-                with st.spinner("AI:n tänker..."):
-                    # Använd kedjan, och skicka med ALLA variabler
+                with st.spinner("The AI is thinking..."):
+                    # Invoke the chain, passing ALL variables
                     response = st.session_state.ai_chain.invoke({
-                        "budget": user_budget,           # Från slidern
-                        "formation": user_formation,     # Från nummer-input
-                        "chat_history": formatted_history, # Från session state
-                        "input": prompt                  # Från chatt-rutan
+                        "budget": user_budget,           # From the slider
+                        "formation": user_formation,     # From the number inputs
+                        "chat_history": formatted_history, # From session state
+                        "input": prompt                  # From the chat box
                     })
                     
                     st.markdown(response)
             
-            # d. Lägg till AI:ns svar i historiken Add the AI answer to the history
+            # d. Add AI response to history
             st.session_state.messages.append({"role": "assistant", "content": response})
 else:
-    st.error("Kunde inte ladda spelardata. Appen kan inte starta.")
+    st.error("Could not load player data. The app cannot start.")
+
