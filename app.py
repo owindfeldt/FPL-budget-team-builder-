@@ -129,7 +129,7 @@ user_api_key = st.sidebar.text_input(
 st.sidebar.divider()
 st.sidebar.header("Your Team Settings")
 
-# 1. Budget Slider (BACK!)
+# 1. Budget Slider 
 user_budget = st.sidebar.slider(
     "Select your budget (in millions):",
     min_value=80.0,
@@ -138,7 +138,7 @@ user_budget = st.sidebar.slider(
     step=0.5
 )
 
-# 2. Formation Selector (BACK!)
+# 2. Formation Selector 
 col1, col2 = st.sidebar.columns(2)
 gk_count = col1.number_input("Goalkeepers (GK):", min_value=1, max_value=1, value=1)
 def_count = col2.number_input("Defenders (DEF):", min_value=3, max_value=5, value=4)
